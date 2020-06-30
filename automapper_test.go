@@ -268,6 +268,19 @@ func TestStructCanBeSet(t *testing.T) {
 	assert.Equal(t, source.Foo, dest.Foo)
 }
 
+func TestNamedType(t *testing.T) {
+	type SourceType string
+	type DestType string
+	source := struct {
+		Foo SourceType
+	}{"abc"}
+	dest := struct {
+		Foo DestType
+	}{}
+	Map(&source, &dest)
+	assert.Equal(t, string(source.Foo), string(dest.Foo))
+}
+
 type SourceParent struct {
 	Children []SourceTypeA
 }
