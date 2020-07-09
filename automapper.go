@@ -13,7 +13,6 @@ package automapper
 import (
 	"fmt"
 	"reflect"
-	"time"
 )
 
 // Map fills out the fields in dest with values from source. All fields in the
@@ -59,7 +58,7 @@ func MapLoose(source, dest interface{}) {
 
 func mapValues(sourceVal, destVal reflect.Value, loose bool) {
 	destType := destVal.Type()
-	if destType.Kind() == reflect.Struct && !structCanBeSet(sourceVal, destVal) {
+	if destType.Kind() == reflect.Struct && !sourceTypeEqualsDestType(sourceVal, destVal) {
 		if sourceVal.Type().Kind() == reflect.Ptr {
 			if sourceVal.IsNil() {
 				// If source is nil, it maps to an empty struct
@@ -163,7 +162,6 @@ func valueIsContainedInNilEmbeddedType(source reflect.Value, fieldName string) b
 	return false
 }
 
-func structCanBeSet(sourceVal, destVal reflect.Value) bool {
-	timeType := reflect.TypeOf(time.Time{})
-	return sourceVal.Type() == timeType && destVal.Type() == timeType
+func sourceTypeEqualsDestType(sourceVal, destVal reflect.Value) bool {
+	return sourceVal.Type() == destVal.Type()
 }
