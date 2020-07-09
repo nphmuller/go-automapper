@@ -258,14 +258,17 @@ func TestWithLooseOption(t *testing.T) {
 }
 
 func TestStructCanBeSet(t *testing.T) {
+	type MainType struct {
+		time.Time
+	}
 	source := struct {
-		Foo time.Time
-	}{time.Now()}
+		Foo MainType
+	}{MainType{Time: time.Now().UTC()}}
 	dest := struct {
-		Foo time.Time
+		Foo MainType
 	}{}
 	Map(&source, &dest)
-	assert.Equal(t, source.Foo, dest.Foo)
+	assert.Equal(t, source.Foo.String(), dest.Foo.String())
 }
 
 func TestNamedType(t *testing.T) {
