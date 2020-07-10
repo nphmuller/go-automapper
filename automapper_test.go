@@ -284,6 +284,18 @@ func TestNamedType(t *testing.T) {
 	assert.Equal(t, string(source.Foo), string(dest.Foo))
 }
 
+func TestSkip(t *testing.T) {
+	source := struct {
+		Foo string
+	}{"abc"}
+	dest := struct {
+		Foo string
+		Bar string `automapper:"skip"`
+	}{}
+	Map(&source, &dest)
+	assert.Empty(t, dest.Bar)
+}
+
 type SourceParent struct {
 	Children []SourceTypeA
 }
