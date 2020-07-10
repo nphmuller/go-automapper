@@ -109,12 +109,17 @@ func verifyArrayTypesAreCompatible(sourceVal, destVal reflect.Value, loose bool)
 
 func mapField(source, destVal reflect.Value, i int, loose bool) {
 	destType := destVal.Type()
-	fieldName := destType.Field(i).Name
+	destTypeField := destType.Field(i)
+	fieldName := destTypeField.Name
 	defer func() {
 		if r := recover(); r != nil {
 			panic(fmt.Sprintf("Error mapping field: %s. DestType: %v. SourceType: %v. Error: %v", fieldName, destType, source.Type(), r))
 		}
 	}()
+
+	if automapperTag, ok := destTypeField.Tag.Lookup("automapper"); ok && automapperTag == "skip" {
+		return
+	}
 
 	destField := destVal.Field(i)
 	if destType.Field(i).Anonymous {
@@ -160,8 +165,4 @@ func valueIsContainedInNilEmbeddedType(source reflect.Value, fieldName string) b
 		}
 	}
 	return false
-}
-
-func sourceTypeEqualsDestType(sourceVal, destVal reflect.Value) bool {
-	return sourceVal.Type() == destVal.Type()
 }
