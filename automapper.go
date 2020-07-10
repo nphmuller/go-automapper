@@ -161,7 +161,3 @@ func valueIsContainedInNilEmbeddedType(source reflect.Value, fieldName string) b
 	}
 	return false
 }
-
-func sourceTypeEqualsDestType(sourceVal, destVal reflect.Value) bool {
-	return sourceVal.Type() == destVal.Type()
-}
