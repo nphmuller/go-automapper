@@ -290,7 +290,7 @@ func TestSkip(t *testing.T) {
 	}{"abc"}
 	dest := struct {
 		Foo string
-		Bar string `automapper:"skip"`
+		Bar string `automapper:"-"`
 	}{}
 	Map(&source, &dest)
 	assert.Empty(t, dest.Bar)
