@@ -117,7 +117,7 @@ func mapField(source, destVal reflect.Value, i int, loose bool) {
 		}
 	}()
 
-	if automapperTag, ok := destTypeField.Tag.Lookup("automapper"); ok && automapperTag == "skip" {
+	if automapperTag, ok := destTypeField.Tag.Lookup("automapper"); ok && automapperTag == "-" {
 		return
 	}
 
