@@ -17,6 +17,7 @@ import (
 
 type MapOptions struct {
 	UseSourceMemberList bool
+	loose bool
 }
 
 // Map fills out the fields in dest with values from source. All fields in the
@@ -51,14 +52,14 @@ func Map(source, dest interface{}) {
 // It is a design decision to panic when a field cannot be mapped in the
 // destination to ensure that a renamed field in either the source or
 // destination does not result in subtle silent bug.
-func MapWithOptions(source, dest interface{}, opt MapOptions) {
+func MapWithOptions(source, dest interface{}, opts MapOptions) {
 	var destType = reflect.TypeOf(dest)
 	if destType.Kind() != reflect.Ptr {
 		panic("Dest must be a pointer type")
 	}
 	var sourceVal = reflect.ValueOf(source)
 	var destVal = reflect.ValueOf(dest).Elem()
-	mapValues(sourceVal, destVal, false, opt.UseSourceMemberList)
+	mapValues(sourceVal, destVal, opts)
 }
 
 // MapLoose works just like Map, except it doesn't fail when the destination
@@ -79,17 +80,18 @@ func MapLoose(source, dest interface{}) {
 // that the Map function should take a number of options that can modify its
 // behavior - but I'd rather not add that functionality before I have a better
 // idea what is a good options format.
-func MapLooseWithOptions(source, dest interface{}, opt MapOptions) {
+func MapLooseWithOptions(source, dest interface{}, opts MapOptions) {
 	var destType = reflect.TypeOf(dest)
 	if destType.Kind() != reflect.Ptr {
 		panic("Dest must be a pointer type")
 	}
 	var sourceVal = reflect.ValueOf(source)
 	var destVal = reflect.ValueOf(dest).Elem()
-	mapValues(sourceVal, destVal, true, opt.UseSourceMemberList)
+	opts.loose = true
+	mapValues(sourceVal, destVal, opts)
 }
 
-func mapValues(sourceVal, destVal reflect.Value, loose, useSourceMemberList bool) {
+func mapValues(sourceVal, destVal reflect.Value, opts MapOptions) {
 	sourceType := sourceVal.Type()
 	destType := destVal.Type()
 	if destType.Kind() == reflect.Struct && sourceVal.Type().Kind() == reflect.Ptr {
@@ -97,60 +99,60 @@ func mapValues(sourceVal, destVal reflect.Value, loose, useSourceMemberList bool
 			sourceVal = reflect.New(sourceType.Elem())
 		}
 		sourceVal = sourceVal.Elem()
-		mapValues(sourceVal, destVal, loose, useSourceMemberList)
+		mapValues(sourceVal, destVal, opts)
 	} else if destType == sourceType {
 		destVal.Set(sourceVal)
 	} else if destType.Kind() == reflect.Struct && sourceType.Kind() == reflect.Struct {
-		mapFields(sourceVal, destVal, loose, useSourceMemberList)
+		mapFields(sourceVal, destVal, opts)
 	} else if destType.Kind() == reflect.Ptr {
 		if valueIsNil(sourceVal) {
 			return
 		}
 		val := reflect.New(destType.Elem())
-		mapValues(sourceVal, val.Elem(), loose, useSourceMemberList)
+		mapValues(sourceVal, val.Elem(), opts)
 		destVal.Set(val)
 	} else if destType.Kind() == reflect.Slice {
-		mapSlice(sourceVal, destVal, loose, useSourceMemberList)
+		mapSlice(sourceVal, destVal, opts)
 	} else {
 		destVal.Set(sourceVal.Convert(destType))
 	}
 }
 
-func mapSlice(sourceVal, destVal reflect.Value, loose, useSourceMemberList bool) {
+func mapSlice(sourceVal, destVal reflect.Value, opts MapOptions) {
 	destType := destVal.Type()
 	length := sourceVal.Len()
 	target := reflect.MakeSlice(destType, length, length)
 	for j := 0; j < length; j++ {
 		val := reflect.New(destType.Elem()).Elem()
-		mapValues(sourceVal.Index(j), val, loose, useSourceMemberList)
+		mapValues(sourceVal.Index(j), val, opts)
 		target.Index(j).Set(val)
 	}
 
 	if length == 0 {
-		verifyArrayTypesAreCompatible(sourceVal, destVal, loose, useSourceMemberList)
+		verifyArrayTypesAreCompatible(sourceVal, destVal, opts)
 	}
 	destVal.Set(target)
 }
 
-func verifyArrayTypesAreCompatible(sourceVal, destVal reflect.Value, loose, useSourceMemberList bool) {
+func verifyArrayTypesAreCompatible(sourceVal, destVal reflect.Value, opts MapOptions) {
 	dummyDest := reflect.New(reflect.PtrTo(destVal.Type()))
 	dummySource := reflect.MakeSlice(sourceVal.Type(), 1, 1)
-	mapValues(dummySource, dummyDest.Elem(), loose, useSourceMemberList)
+	mapValues(dummySource, dummyDest.Elem(), opts)
 }
 
-func mapFields(sourceVal, destVal reflect.Value, loose, useSourceMemberList bool) {
-	if useSourceMemberList {
+func mapFields(sourceVal, destVal reflect.Value, opts MapOptions) {
+	if opts.UseSourceMemberList {
 		for i := 0; i < sourceVal.NumField(); i++ {
-			mapSourceField(sourceVal, destVal, i, loose, useSourceMemberList)
+			mapSourceField(sourceVal, destVal, i, opts)
 		}
 	} else {
 		for i := 0; i < destVal.NumField(); i++ {
-			mapDestField(sourceVal, destVal, i, loose, useSourceMemberList)
+			mapDestField(sourceVal, destVal, i, opts)
 		}
 	}
 }
 
-func mapDestField(source, destVal reflect.Value, i int, loose, useSourceMemberList bool) {
+func mapDestField(source, destVal reflect.Value, i int, opts MapOptions) {
 	destType := destVal.Type()
 	destTypeField := destType.Field(i)
 	fieldName := destTypeField.Name
@@ -166,18 +168,18 @@ func mapDestField(source, destVal reflect.Value, i int, loose, useSourceMemberLi
 
 	destField := destVal.Field(i)
 	if destType.Field(i).Anonymous {
-		mapValues(source, destField, loose, useSourceMemberList)
+		mapValues(source, destField, opts)
 	} else {
 		if valueIsContainedInNilEmbeddedType(source, fieldName) {
 			return
 		}
 		sourceField := source.FieldByName(fieldName)
 		if (sourceField == reflect.Value{}) {
-			if loose {
+			if opts.loose {
 				return
 			}
 			if destField.Kind() == reflect.Struct {
-				mapValues(source, destField, loose, useSourceMemberList)
+				mapValues(source, destField, opts)
 				return
 			} else {
 				for i := 0; i < source.NumField(); i++ {
@@ -190,10 +192,10 @@ func mapDestField(source, destVal reflect.Value, i int, loose, useSourceMemberLi
 				}
 			}
 		}
-		mapValues(sourceField, destField, loose, useSourceMemberList)
+		mapValues(sourceField, destField, opts)
 	}
 }
-func mapSourceField(source, destVal reflect.Value, i int, loose, useSourceMemberList bool) {
+func mapSourceField(source, destVal reflect.Value, i int, opts MapOptions) {
 	sourceType := source.Type()
 	sourceTypeField := sourceType.Field(i)
 	fieldName := sourceTypeField.Name
@@ -207,7 +209,7 @@ func mapSourceField(source, destVal reflect.Value, i int, loose, useSourceMember
 	for q := 0; q < destVal.Type().NumField(); q++ {
 		destFieldName := destVal.Type().Field(q).Name
 		if sourceFieldName == destFieldName {
-			mapDestField(source, destVal, q, loose, useSourceMemberList)
+			mapDestField(source, destVal, q, opts)
 			return
 		}
 	}
