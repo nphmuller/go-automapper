@@ -15,53 +15,35 @@ import (
 	"reflect"
 )
 
-type MapOptions struct {
-	UseSourceMemberList bool
+type mapOptions struct {
+	useSourceMemberList bool
 }
 
-// Map fills out the fields in dest with values from source. All fields in the
+// MapToDestination fills out the fields in dest with values from source. All fields in the
 // destination object must exist in the source object.
-//
-// Object hierarchies with nested structs and slices are supported, as long as
-// type types of nested structs/slices follow the same rules, i.e. all fields
-// in destination structs must be found on the source struct.
-//
-// Embedded/anonymous structs are supported
-//
-// Values that are not exported/not public will not be mapped.
-//
-// It is a design decision to panic when a field cannot be mapped in the
-// destination to ensure that a renamed field in either the source or
-// destination does not result in subtle silent bug.
-func Map(source, dest interface{}) {
-	MapWithOptions(source, dest, MapOptions{})
-}
-
-// MapWithOptions fills out the fields in dest with values from source. All fields in the
-// destination object must exist in the source object.
-//
-// Object hierarchies with nested structs and slices are supported, as long as
-// type types of nested structs/slices follow the same rules, i.e. all fields
-// in destination structs must be found on the source struct.
-//
-// Embedded/anonymous structs are supported
-//
-// Values that are not exported/not public will not be mapped.
-//
-// It is a design decision to panic when a field cannot be mapped in the
-// destination to ensure that a renamed field in either the source or
-// destination does not result in subtle silent bug.
-func MapWithOptions(source, dest interface{}, opts MapOptions) {
+func MapToDestination(source, dest interface{}) {
 	var destType = reflect.TypeOf(dest)
 	if destType.Kind() != reflect.Ptr {
 		panic("Dest must be a pointer type")
 	}
 	var sourceVal = reflect.ValueOf(source)
 	var destVal = reflect.ValueOf(dest).Elem()
-	mapValues(sourceVal, destVal, opts)
+	mapValues(sourceVal, destVal, mapOptions{useSourceMemberList: false})
 }
 
-func mapValues(sourceVal, destVal reflect.Value, opts MapOptions) {
+// MapFromSource fills out the fields in dest with values from source. All fields in the
+// source object must exist in the destination object.
+func MapFromSource(source, dest interface{}) {
+	var destType = reflect.TypeOf(dest)
+	if destType.Kind() != reflect.Ptr {
+		panic("Dest must be a pointer type")
+	}
+	var sourceVal = reflect.ValueOf(source)
+	var destVal = reflect.ValueOf(dest).Elem()
+	mapValues(sourceVal, destVal, mapOptions{useSourceMemberList: true})
+}
+
+func mapValues(sourceVal, destVal reflect.Value, opts mapOptions) {
 	sourceType := sourceVal.Type()
 	destType := destVal.Type()
 	if destType.Kind() == reflect.Struct && sourceVal.Type().Kind() == reflect.Ptr {
@@ -88,7 +70,7 @@ func mapValues(sourceVal, destVal reflect.Value, opts MapOptions) {
 	}
 }
 
-func mapSlice(sourceVal, destVal reflect.Value, opts MapOptions) {
+func mapSlice(sourceVal, destVal reflect.Value, opts mapOptions) {
 	destType := destVal.Type()
 	length := sourceVal.Len()
 	target := reflect.MakeSlice(destType, length, length)
@@ -104,14 +86,14 @@ func mapSlice(sourceVal, destVal reflect.Value, opts MapOptions) {
 	destVal.Set(target)
 }
 
-func verifyArrayTypesAreCompatible(sourceVal, destVal reflect.Value, opts MapOptions) {
+func verifyArrayTypesAreCompatible(sourceVal, destVal reflect.Value, opts mapOptions) {
 	dummyDest := reflect.New(reflect.PtrTo(destVal.Type()))
 	dummySource := reflect.MakeSlice(sourceVal.Type(), 1, 1)
 	mapValues(dummySource, dummyDest.Elem(), opts)
 }
 
-func mapFields(sourceVal, destVal reflect.Value, opts MapOptions) {
-	if opts.UseSourceMemberList {
+func mapFields(sourceVal, destVal reflect.Value, opts mapOptions) {
+	if opts.useSourceMemberList {
 		for i := 0; i < sourceVal.NumField(); i++ {
 			mapSourceField(sourceVal, destVal, i, opts)
 		}
@@ -122,7 +104,7 @@ func mapFields(sourceVal, destVal reflect.Value, opts MapOptions) {
 	}
 }
 
-func mapDestField(source, destVal reflect.Value, i int, opts MapOptions) {
+func mapDestField(source, destVal reflect.Value, i int, opts mapOptions) {
 	destType := destVal.Type()
 	destTypeField := destType.Field(i)
 	destFieldName := destTypeField.Name
@@ -149,7 +131,7 @@ func mapDestField(source, destVal reflect.Value, i int, opts MapOptions) {
 	}
 }
 
-func mapSourceField(source, destVal reflect.Value, i int, opts MapOptions) {
+func mapSourceField(source, destVal reflect.Value, i int, opts mapOptions) {
 	sourceType := source.Type()
 	sourceTypeField := sourceType.Field(i)
 	sourceFieldName := sourceTypeField.Name
@@ -171,7 +153,7 @@ func mapSourceField(source, destVal reflect.Value, i int, opts MapOptions) {
 	mapByFieldName(source, destVal, opts, sourceFieldName, destFieldName)
 }
 
-func mapByFieldName(source, destVal reflect.Value, opts MapOptions, sourceFieldName, destFieldName string) {
+func mapByFieldName(source, destVal reflect.Value, opts mapOptions, sourceFieldName, destFieldName string) {
 	destField := destVal.FieldByName(destFieldName)
 	if valueIsContainedInNilEmbeddedType(source, sourceFieldName) {
 		return
