@@ -142,65 +142,83 @@ func mapFields(sourceVal, destVal reflect.Value, opts MapOptions) {
 func mapDestField(source, destVal reflect.Value, i int, opts MapOptions) {
 	destType := destVal.Type()
 	destTypeField := destType.Field(i)
-	fieldName := destTypeField.Name
+	destFieldName := destTypeField.Name
+	sourceFieldName := destFieldName
+
+	if automapperTag, ok := destTypeField.Tag.Lookup("automapper"); ok {
+		if automapperTag == "-" {
+			return
+		}
+		sourceFieldName = automapperTag
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
-			panic(fmt.Sprintf("Error mapping field: %s. DestType: %v. SourceType: %v. Error: %v", fieldName, destType, source.Type(), r))
+			panic(fmt.Sprintf("Error mapping field: %s. DestType: %v. SourceType: %v. Error: %v", destFieldName, destType, source.Type(), r))
 		}
 	}()
-
-	if automapperTag, ok := destTypeField.Tag.Lookup("automapper"); ok && automapperTag == "-" {
-		return
-	}
 
 	destField := destVal.Field(i)
 	if destType.Field(i).Anonymous {
 		mapValues(source, destField, opts)
 	} else {
-		if valueIsContainedInNilEmbeddedType(source, fieldName) {
-			return
-		}
-		sourceField := source.FieldByName(fieldName)
-		if (sourceField == reflect.Value{}) {
-			if opts.loose {
-				return
-			}
-			if destField.Kind() == reflect.Struct {
-				mapValues(source, destField, opts)
-				return
-			} else {
-				for i := 0; i < source.NumField(); i++ {
-					if source.Field(i).Kind() != reflect.Struct {
-						continue
-					}
-					if sourceField = source.Field(i).FieldByName(fieldName); (sourceField != reflect.Value{}) {
-						break
-					}
-				}
-			}
-		}
-		mapValues(sourceField, destField, opts)
+		mapByFieldName(source, destVal, opts, sourceFieldName, destFieldName)
 	}
 }
+
 func mapSourceField(source, destVal reflect.Value, i int, opts MapOptions) {
 	sourceType := source.Type()
 	sourceTypeField := sourceType.Field(i)
-	fieldName := sourceTypeField.Name
+	sourceFieldName := sourceTypeField.Name
+	destFieldName := sourceFieldName
+
+	if automapperTag, ok := sourceTypeField.Tag.Lookup("automapper"); ok {
+		if automapperTag == "-" {
+			return
+		}
+		destFieldName = automapperTag
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
-			panic(fmt.Sprintf("Error mapping field: %s. DestType: %v. SourceType: %v. Error: %v", fieldName, destVal.Type(), sourceType, r))
+			panic(fmt.Sprintf("Error mapping field: %s. DestType: %v. SourceType: %v. Error: %v", sourceFieldName, destVal.Type(), sourceType, r))
 		}
 	}()
 
-	sourceFieldName := source.Type().Field(i).Name
-	for q := 0; q < destVal.Type().NumField(); q++ {
-		destFieldName := destVal.Type().Field(q).Name
-		if sourceFieldName == destFieldName {
-			mapDestField(source, destVal, q, opts)
+	mapByFieldName(source, destVal, opts, sourceFieldName, destFieldName)
+}
+
+func mapByFieldName(source, destVal reflect.Value, opts MapOptions, sourceFieldName, destFieldName string) {
+	destField := destVal.FieldByName(destFieldName)
+	if (destField == reflect.Value{}) {
+		if opts.loose {
 			return
 		}
 	}
-	panic("destination has no field that matches source field")
+
+	if valueIsContainedInNilEmbeddedType(source, sourceFieldName) {
+		return
+	}
+	sourceField := source.FieldByName(sourceFieldName)
+	if (sourceField == reflect.Value{}) {
+		if opts.loose {
+			return
+		}
+		if destField.Kind() == reflect.Struct {
+			mapValues(source, destField, opts)
+			return
+		} else {
+			for i := 0; i < source.NumField(); i++ {
+				if source.Field(i).Kind() != reflect.Struct {
+					continue
+				}
+				if sourceField = source.Field(i).FieldByName(sourceFieldName); (sourceField != reflect.Value{}) {
+					break
+				}
+			}
+		}
+	}
+	mapValues(sourceField, destField, opts)
 }
 
 func valueIsNil(value reflect.Value) bool {
