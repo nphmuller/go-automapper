@@ -296,6 +296,28 @@ func TestSkip(t *testing.T) {
 	assert.Empty(t, dest.Bar)
 }
 
+func TestMapFrom(t *testing.T) {
+	source := struct {
+		Foo string
+	}{"abc"}
+	dest := struct {
+		Bar string `automapper:"Foo"`
+	}{}
+	Map(&source, &dest)
+	assert.Equal(t, source.Foo, dest.Bar)
+}
+
+func TestMapTo(t *testing.T) {
+	source := struct {
+		Foo string `automapper:"Bar"`
+	}{"abc"}
+	dest := struct {
+		Bar string
+	}{}
+	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
+	assert.Equal(t, source.Foo, dest.Bar)
+}
+
 func TestMapSourceField_DestContainsUnmappedFields(t *testing.T) {
 	source := struct {
 		Foo string
@@ -319,18 +341,15 @@ func TestMapSourceField_Panics(t *testing.T) {
 	t.Error("Should have panicked")
 }
 
-func TestMapSourceField_SkipsOnlyOnDestinationTag(t *testing.T) {
+func TestMapSourceField_Skip(t *testing.T) {
 	source := struct {
-		Foo string
-		Bar string `automapper:"-"`
-	}{"abc", "def"}
-	dest := struct {
 		Foo string `automapper:"-"`
+	}{"abc"}
+	dest := struct {
 		Bar string
 	}{}
 	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
-	assert.Empty(t, dest.Foo)
-	assert.Equal(t, source.Bar, dest.Bar)
+	assert.Empty(t, dest.Bar)
 }
 
 type SourceParent struct {
