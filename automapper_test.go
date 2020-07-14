@@ -243,20 +243,6 @@ func TestWhenUsingIncompatibleTypes(t *testing.T) {
 	t.Error("Should have panicked")
 }
 
-func TestWithLooseOption(t *testing.T) {
-	source := struct {
-		Foo string
-		Baz int
-	}{"Foo", 42}
-	dest := struct {
-		Foo string
-		Bar int
-	}{}
-	MapLoose(&source, &dest)
-	assert.Equal(t, dest.Foo, "Foo")
-	assert.Equal(t, dest.Bar, 0)
-}
-
 func TestSetStructOfSameTypeDirectly(t *testing.T) {
 	type FooType struct {
 		time.Time

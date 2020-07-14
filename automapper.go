@@ -17,7 +17,6 @@ import (
 
 type MapOptions struct {
 	UseSourceMemberList bool
-	loose bool
 }
 
 // Map fills out the fields in dest with values from source. All fields in the
@@ -62,22 +61,6 @@ func MapWithOptions(source, dest interface{}, opts MapOptions) {
 	mapValues(sourceVal, destVal, opts)
 }
 
-// MapLoose works just like Map, except it doesn't fail when the destination
-// type contains fields not supplied by the source.
-//
-// This function is meant to be a temporary solution - the general idea is
-// that the Map function should take a number of options that can modify its
-// behavior - but I'd rather not add that functionality before I have a better
-// idea what is a good options format.
-func MapLoose(source, dest interface{}) {
-	var destType = reflect.TypeOf(dest)
-	if destType.Kind() != reflect.Ptr {
-		panic("Dest must be a pointer type")
-	}
-	var sourceVal = reflect.ValueOf(source)
-	var destVal = reflect.ValueOf(dest).Elem()
-	mapValues(sourceVal, destVal, MapOptions{loose: true})
-}
 func mapValues(sourceVal, destVal reflect.Value, opts MapOptions) {
 	sourceType := sourceVal.Type()
 	destType := destVal.Type()
@@ -190,20 +173,11 @@ func mapSourceField(source, destVal reflect.Value, i int, opts MapOptions) {
 
 func mapByFieldName(source, destVal reflect.Value, opts MapOptions, sourceFieldName, destFieldName string) {
 	destField := destVal.FieldByName(destFieldName)
-	if (destField == reflect.Value{}) {
-		if opts.loose {
-			return
-		}
-	}
-
 	if valueIsContainedInNilEmbeddedType(source, sourceFieldName) {
 		return
 	}
 	sourceField := source.FieldByName(sourceFieldName)
 	if (sourceField == reflect.Value{}) {
-		if opts.loose {
-			return
-		}
 		if destField.Kind() == reflect.Struct {
 			mapValues(source, destField, opts)
 			return
