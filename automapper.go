@@ -70,27 +70,14 @@ func MapWithOptions(source, dest interface{}, opts MapOptions) {
 // behavior - but I'd rather not add that functionality before I have a better
 // idea what is a good options format.
 func MapLoose(source, dest interface{}) {
-	MapLooseWithOptions(source, dest, MapOptions{})
-}
-
-// MapLooseWithOptions works just like Map, except it doesn't fail when the destination
-// type contains fields not supplied by the source.
-//
-// This function is meant to be a temporary solution - the general idea is
-// that the Map function should take a number of options that can modify its
-// behavior - but I'd rather not add that functionality before I have a better
-// idea what is a good options format.
-func MapLooseWithOptions(source, dest interface{}, opts MapOptions) {
 	var destType = reflect.TypeOf(dest)
 	if destType.Kind() != reflect.Ptr {
 		panic("Dest must be a pointer type")
 	}
 	var sourceVal = reflect.ValueOf(source)
 	var destVal = reflect.ValueOf(dest).Elem()
-	opts.loose = true
-	mapValues(sourceVal, destVal, opts)
+	mapValues(sourceVal, destVal, MapOptions{loose: true})
 }
-
 func mapValues(sourceVal, destVal reflect.Value, opts MapOptions) {
 	sourceType := sourceVal.Type()
 	destType := destVal.Type()
