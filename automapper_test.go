@@ -12,20 +12,20 @@ import (
 func TestPanicWhenDestIsNotPointer(t *testing.T) {
 	defer func() { recover() }()
 	source, dest := SourceTypeA{}, DestTypeA{}
-	Map(source, dest)
+	MapToDestination(source, dest)
 
 	t.Error("Should have panicked")
 }
 
 func TestDestinationIsUpdatedFromSource(t *testing.T) {
 	source, dest := SourceTypeA{Foo: 42}, DestTypeA{}
-	Map(source, &dest)
+	MapToDestination(source, &dest)
 	assert.Equal(t, 42, dest.Foo)
 }
 
 func TestDestinationIsUpdatedFromSourceWhenSourcePassedAsPtr(t *testing.T) {
 	source, dest := SourceTypeA{42, "Bar"}, DestTypeA{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, 42, dest.Foo)
 	assert.Equal(t, "Bar", dest.Bar)
 }
@@ -42,7 +42,7 @@ func TestWithNestedTypes(t *testing.T) {
 
 	source.Baz = "Baz"
 	source.Child.Bar = "Bar"
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, "Baz", dest.Baz)
 	assert.Equal(t, "Bar", dest.Child.Bar)
 }
@@ -54,7 +54,7 @@ func TestWithSourceSecondLevel(t *testing.T) {
 	dest := SourceTypeA{}
 
 	source.Child.Bar = "Bar"
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, "Bar", dest.Bar)
 }
 
@@ -65,7 +65,7 @@ func TestWithDestSecondLevel(t *testing.T) {
 	}{}
 
 	source.Bar = "Bar"
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, "Bar", dest.Child.Bar)
 }
 
@@ -80,7 +80,7 @@ func TestWithSliceTypes(t *testing.T) {
 		SourceTypeA{Foo: 1},
 		SourceTypeA{Foo: 2}}
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, 1, dest.Children[0].Foo)
 	assert.Equal(t, 2, dest.Children[1].Foo)
 }
@@ -104,7 +104,7 @@ func TestWithMultiLevelSlices(t *testing.T) {
 		},
 	}
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 }
 
 func TestWithEmptySliceAndIncompatibleTypes(t *testing.T) {
@@ -117,7 +117,7 @@ func TestWithEmptySliceAndIncompatibleTypes(t *testing.T) {
 		Children []struct{ Bar int }
 	}{}
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	t.Error("Should have panicked")
 }
 
@@ -129,7 +129,7 @@ func TestWhenSourceIsMissingField(t *testing.T) {
 	dest := struct {
 		A, B string
 	}{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	t.Error("Should have panicked")
 }
 
@@ -145,7 +145,7 @@ func TestWithUnnamedFields(t *testing.T) {
 	source.Baz = "Baz"
 	source.SourceTypeA.Foo = 42
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, "Baz", dest.Baz)
 	assert.Equal(t, 42, dest.DestTypeA.Foo)
 }
@@ -159,7 +159,7 @@ func TestWithPointerFieldsNotNil(t *testing.T) {
 	}{}
 	source.Foo = nil
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Nil(t, dest.Foo)
 }
 
@@ -172,12 +172,12 @@ func TestWithPointerFieldsNil(t *testing.T) {
 	}{}
 	source.Foo = &SourceTypeA{Foo: 42}
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.NotNil(t, dest.Foo)
 	assert.Equal(t, 42, dest.Foo.Foo)
 }
 
-func TestMapFromPointerToNonPointerTypeWithData(t *testing.T) {
+func TestMapToDestinationPointerToNonPointerTypeWithData(t *testing.T) {
 	source := struct {
 		Foo *SourceTypeA
 	}{}
@@ -186,12 +186,12 @@ func TestMapFromPointerToNonPointerTypeWithData(t *testing.T) {
 	}{}
 	source.Foo = &SourceTypeA{Foo: 42}
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.NotNil(t, dest.Foo)
 	assert.Equal(t, 42, dest.Foo.Foo)
 }
 
-func TestMapFromPointerToNonPointerTypeWithoutData(t *testing.T) {
+func TestMapToDestinationPointerToNonPointerTypeWithoutData(t *testing.T) {
 	source := struct {
 		Foo *SourceTypeA
 	}{}
@@ -200,12 +200,12 @@ func TestMapFromPointerToNonPointerTypeWithoutData(t *testing.T) {
 	}{}
 	source.Foo = nil
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.NotNil(t, dest.Foo)
 	assert.Equal(t, 0, dest.Foo.Foo)
 }
 
-func TestMapFromPointerToAnonymousTypeToFieldName(t *testing.T) {
+func TestMapToDestinationPointerToAnonymousTypeToFieldName(t *testing.T) {
 	source := struct {
 		*SourceTypeA
 	}{}
@@ -214,11 +214,11 @@ func TestMapFromPointerToAnonymousTypeToFieldName(t *testing.T) {
 	}{}
 	source.SourceTypeA = nil
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, 0, dest.Foo)
 }
 
-func TestMapFromPointerToNonPointerTypeWithoutDataAndIncompatibleType(t *testing.T) {
+func TestMapToDestinationPointerToNonPointerTypeWithoutDataAndIncompatibleType(t *testing.T) {
 	defer func() { recover() }()
 	// Just make sure we stil panic
 	source := struct {
@@ -231,7 +231,7 @@ func TestMapFromPointerToNonPointerTypeWithoutDataAndIncompatibleType(t *testing
 	}{}
 	source.Foo = nil
 
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	t.Error("Should have panicked")
 }
 
@@ -239,22 +239,8 @@ func TestWhenUsingIncompatibleTypes(t *testing.T) {
 	defer func() { recover() }()
 	source := struct{ Foo string }{}
 	dest := struct{ Foo int }{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	t.Error("Should have panicked")
-}
-
-func TestWithLooseOption(t *testing.T) {
-	source := struct {
-		Foo string
-		Baz int
-	}{"Foo", 42}
-	dest := struct {
-		Foo string
-		Bar int
-	}{}
-	MapLoose(&source, &dest)
-	assert.Equal(t, dest.Foo, "Foo")
-	assert.Equal(t, dest.Bar, 0)
 }
 
 func TestSetStructOfSameTypeDirectly(t *testing.T) {
@@ -267,7 +253,7 @@ func TestSetStructOfSameTypeDirectly(t *testing.T) {
 	dest := struct {
 		Foo FooType
 	}{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, source.Foo.String(), dest.Foo.String())
 }
 
@@ -280,7 +266,7 @@ func TestNamedType(t *testing.T) {
 	dest := struct {
 		Foo DestType
 	}{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, string(source.Foo), string(dest.Foo))
 }
 
@@ -292,29 +278,29 @@ func TestSkip(t *testing.T) {
 		Foo string
 		Bar string `automapper:"-"`
 	}{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Empty(t, dest.Bar)
 }
 
-func TestMapFrom(t *testing.T) {
+func TestMapToDestination(t *testing.T) {
 	source := struct {
 		Foo string
 	}{"abc"}
 	dest := struct {
 		Bar string `automapper:"Foo"`
 	}{}
-	Map(&source, &dest)
+	MapToDestination(&source, &dest)
 	assert.Equal(t, source.Foo, dest.Bar)
 }
 
-func TestMapTo(t *testing.T) {
+func TestMapFromSource(t *testing.T) {
 	source := struct {
 		Foo string `automapper:"Bar"`
 	}{"abc"}
 	dest := struct {
 		Bar string
 	}{}
-	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
+	MapFromSource(&source, &dest)
 	assert.Equal(t, source.Foo, dest.Bar)
 }
 
@@ -326,7 +312,7 @@ func TestMapSourceField_DestContainsUnmappedFields(t *testing.T) {
 		Foo string
 		Bar string
 	}{}
-	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
+	MapFromSource(&source, &dest)
 	assert.Equal(t, source.Foo, dest.Foo)
 }
 
@@ -337,7 +323,7 @@ func TestMapSourceField_Panics(t *testing.T) {
 	}{"abc"}
 	dest := struct {
 	}{}
-	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
+	MapFromSource(&source, &dest)
 	t.Error("Should have panicked")
 }
 
@@ -348,7 +334,7 @@ func TestMapSourceField_Skip(t *testing.T) {
 	dest := struct {
 		Bar string
 	}{}
-	MapWithOptions(&source, &dest, MapOptions{UseSourceMemberList: true})
+	MapFromSource(&source, &dest)
 	assert.Empty(t, dest.Bar)
 }
 
