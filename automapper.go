@@ -150,7 +150,12 @@ func mapSourceField(source, destVal reflect.Value, i int, opts mapOptions) {
 		}
 	}()
 
-	mapByFieldName(source, destVal, opts, sourceFieldName, destFieldName)
+	sourceField := source.Field(i)
+	if sourceType.Field(i).Anonymous {
+		mapValues(sourceField, destVal, opts)
+	} else {
+		mapByFieldName(source, destVal, opts, sourceFieldName, destFieldName)
+	}
 }
 
 func mapByFieldName(source, destVal reflect.Value, opts mapOptions, sourceFieldName, destFieldName string) {
