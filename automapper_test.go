@@ -338,6 +338,40 @@ func TestMapSourceField_Skip(t *testing.T) {
 	assert.Empty(t, dest.Bar)
 }
 
+func TestMapSourceField_FromAnonymous(t *testing.T) {
+	source := struct{
+		SourceTypeA
+	}{
+		SourceTypeA: SourceTypeA{Foo: 42},
+	}
+	dest := DestTypeA{}
+	MapFromSource(&source, &dest)
+	assert.Equal(t, source.Foo, dest.Foo)
+}
+
+func TestMapSourceField_ToAnonymous(t *testing.T) {
+	source := SourceTypeA{Foo: 42}
+	dest := struct{
+		DestTypeA
+	}{}
+	MapFromSource(&source, &dest)
+	assert.Equal(t, source.Foo, dest.Foo)
+}
+
+func TestMapSourceField_BothAnonymous(t *testing.T) {
+	source := struct {
+		SourceTypeA
+	}{
+		SourceTypeA: SourceTypeA{Foo: 42},
+	}
+	dest := struct {
+		DestTypeA
+	}{}
+
+	MapFromSource(&source, &dest)
+	assert.Equal(t, source.Foo, dest.Foo)
+}
+
 type SourceParent struct {
 	Children []SourceTypeA
 }
