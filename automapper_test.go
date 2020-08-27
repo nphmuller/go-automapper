@@ -372,6 +372,29 @@ func TestMapSourceField_BothAnonymous(t *testing.T) {
 	assert.Equal(t, source.Foo, dest.Foo)
 }
 
+func TestMapFromSourceMap(t *testing.T) {
+	type childSrc struct {
+		Foo string
+	}
+	type childDest struct {
+		Foo string
+		Bar string
+	}
+	source := map[string]interface{}{
+		"Foo": "abc",
+		"Child": childSrc{Foo: "456"},
+	}
+	dest := struct {
+		Foo string
+		Bar string
+		Child childDest
+	}{Bar: "123"}
+	MapFromSourceMap(source, &dest)
+	assert.Equal(t, "abc", dest.Foo)
+	assert.Equal(t, "123", dest.Bar)
+	assert.Equal(t, "456", dest.Child.Foo)
+}
+
 type SourceParent struct {
 	Children []SourceTypeA
 }
