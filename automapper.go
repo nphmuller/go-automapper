@@ -43,6 +43,21 @@ func MapFromSource(source, dest interface{}) {
 	mapValues(sourceVal, destVal, mapOptions{useSourceMemberList: true})
 }
 
+// MapFromSourceMap fills out the fields in dest with values from source map. All fields in the
+// source map must exist in the destination object.
+func MapFromSourceMap(source map[string]interface{}, dest interface{}) {
+	var destType = reflect.TypeOf(dest)
+	if destType.Kind() != reflect.Ptr {
+		panic("Dest must be a pointer type")
+	}
+
+	var destVal = reflect.ValueOf(dest).Elem()
+	for key, value := range source {
+		destFieldVal := destVal.FieldByName(key)
+		mapValues(reflect.ValueOf(value), destFieldVal, mapOptions{useSourceMemberList: true})
+	}
+}
+
 func mapValues(sourceVal, destVal reflect.Value, opts mapOptions) {
 	sourceType := sourceVal.Type()
 	destType := destVal.Type()
