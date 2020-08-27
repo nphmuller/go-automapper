@@ -389,10 +389,12 @@ func TestMapFromSourceMap(t *testing.T) {
 		Bar string
 		Child childDest
 	}{Bar: "123"}
+
 	MapFromSourceMap(source, &dest)
-	assert.Equal(t, "abc", dest.Foo)
-	assert.Equal(t, "123", dest.Bar)
-	assert.Equal(t, "456", dest.Child.Foo)
+
+	assert.Equal(t, "abc", dest.Foo, "should map direct field")
+	assert.Equal(t, "123", dest.Bar, "field should not be overwritten")
+	assert.Equal(t, "456", dest.Child.Foo, "struct fields should be mapped")
 }
 
 type SourceParent struct {
